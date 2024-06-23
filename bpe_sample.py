@@ -38,3 +38,21 @@ top_pair = max(stats, key=stats.get)
 tokens2 = merge(tokens, top_pair, 256)
 print(tokens2)
 print("length:", len(tokens2))
+
+# Merge loop
+vocab_size = 276
+num_merges = vocab_size - 256
+ids = list(tokens)
+
+merges = {}  # (int, int) -> int
+for i in range(num_merges):
+    stats = get_stats(ids)
+    pair = max(stats, key=stats.get)
+    idx = 256 + i
+    print(f"merging {pair} into a new token {idx}")
+    ids = merge(ids, pair, idx)
+    merges[pair] = idx
+
+print("tokens length:", len(tokens))
+print("ids length:", len(ids))
+print(f"compression ratio: {len(tokens) / len(ids):.2f}X")
