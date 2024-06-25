@@ -56,3 +56,17 @@ for i in range(num_merges):
 print("tokens length:", len(tokens))
 print("ids length:", len(ids))
 print(f"compression ratio: {len(tokens) / len(ids):.2f}X")
+
+# Decode
+vocab = {idx: bytes([idx]) for idx in range(256)}
+for (p0, p1), idx in merges.items():
+    vocab[idx] = vocab[p0] + vocab[p1]  # two bytes object concat
+
+
+def decode(ids):
+    tokens = b"".join(vocab[idx] for idx in ids)
+    text = tokens.decode("utf-8", errors="replace")  # avoid UnicodeDecodeError
+    return text
+
+
+print(decode([128]))
