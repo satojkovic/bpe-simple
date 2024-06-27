@@ -70,3 +70,20 @@ def decode(ids):
 
 
 print(decode([128]))
+
+
+def encode(text):
+    tokens = list(text.encode("utf-8"))
+    while len(tokens) >= 2:
+        stats = get_stats(tokens)
+        pair = min(stats, key=lambda p: merges.get(p, float("inf")))
+        if pair not in merges:
+            break
+        idx = merges[pair]
+        tokens = merge(tokens, pair, idx)
+    return tokens
+
+
+print(encode("hello world!"))
+print(encode("h"))
+print(encode(""))
