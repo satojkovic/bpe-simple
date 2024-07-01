@@ -87,3 +87,11 @@ def encode(text):
 print(encode("hello world!"))
 print(encode("h"))
 print(encode(""))
+
+import regex as re
+
+gpt2pat = re.compile(
+    r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+)
+print(re.findall(gpt2pat, "hello world123 how's are you!!!   "))
+print(re.findall(gpt2pat, "hello world123 HOW'S are you!!!   "))
