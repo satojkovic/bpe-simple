@@ -95,3 +95,15 @@ gpt2pat = re.compile(
 )
 print(re.findall(gpt2pat, "hello world123 how's are you!!!   "))
 print(re.findall(gpt2pat, "hello world123 HOW'S are you!!!   "))
+
+# tiktoken
+
+import tiktoken
+
+# GPT-2
+enc = tiktoken.get_encoding("gpt2")
+print(enc.encode("    hello world!!!"))
+
+# GPT-4
+enc = tiktoken.get_encoding('cl100k_base')
+print(enc.encode("    hello world!!!"))
