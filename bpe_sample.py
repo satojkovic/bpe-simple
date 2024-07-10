@@ -107,3 +107,17 @@ print(enc.encode("    hello world!!!"))
 # GPT-4
 enc = tiktoken.get_encoding('cl100k_base')
 print(enc.encode("    hello world!!!"))
+
+import os, json
+
+with open('encoder.json', 'r') as f:
+    encoder = json.load(f)  # equivalent to vocab
+
+with open('vocab.bpe', 'r', encoding='utf-8') as f:
+    bpe_data = f.read()
+
+bpe_merges = [tuple(merge_str.split()) for merge_str in bpe_data.split('\n')[1:-1]]
+# ^--- equivalent to merges
+
+print(len(encoder))
+print(len(bpe_merges))
