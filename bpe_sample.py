@@ -116,6 +116,8 @@ with open('encoder.json', 'r') as f:
 with open('vocab.bpe', 'r', encoding='utf-8') as f:
     bpe_data = f.read()
 
+print('bpe_data[0]:', bpe_data.split('\n')[0:2])
+print('bpe_data[-1]:', bpe_data.split('\n')[-2:])
 bpe_merges = [tuple(merge_str.split()) for merge_str in bpe_data.split('\n')[1:-1]]
 # ^--- equivalent to merges
 
