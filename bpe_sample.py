@@ -24,12 +24,13 @@ tokens = text.encode("utf-8")  # raw bytes
 tokens = list(map(int, tokens))  # convert to a list of integers
 print("---")
 print(text)
-print("length:", len(text))
+print("Text length:", len(text))
 print("---")
 print(tokens)
-print("length:", len(tokens))
+print("Token (Bytes) length:", len(tokens))
 
 stats = get_stats(tokens)
+print("Byte Pair stats:")
 print(sorted(((v, k) for k, v in stats.items()), reverse=True))
 
 # Replace all consecutive occurrences of pair with the new token idx
