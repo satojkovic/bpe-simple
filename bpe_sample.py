@@ -47,9 +47,9 @@ print(tokens2)
 print("length:", len(tokens2))
 
 # Merge loop
-vocab_size = 276
-num_merges = vocab_size - 256
-ids = list(tokens)
+vocab_size = 276  # desired vocabulary size
+num_merges = vocab_size - 256  # number of merges to perform
+ids = list(tokens)  # copy tokens to ids
 
 merges = {}  # (int, int) -> int
 for i in range(num_merges):
