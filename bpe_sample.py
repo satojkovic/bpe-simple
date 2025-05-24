@@ -71,6 +71,7 @@ for (p0, p1), idx in merges.items():
 
 
 def decode(ids):
+    """Decode a list of token ids into a string."""
     tokens = b"".join(vocab[idx] for idx in ids)
     text = tokens.decode("utf-8", errors="replace")  # avoid UnicodeDecodeError
     return text
@@ -80,6 +81,7 @@ print(decode([128]))
 
 
 def encode(text):
+    """Encode a string into a list of token ids."""
     tokens = list(text.encode("utf-8"))
     while len(tokens) >= 2:
         stats = get_stats(tokens)
@@ -91,7 +93,7 @@ def encode(text):
     return tokens
 
 
-print(encode("hello world!"))
+print('encode then decode: hello world! -> ', decode(encode("hello world!")))
 print(encode("h"))
 print(encode(""))
 
