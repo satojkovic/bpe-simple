@@ -34,7 +34,13 @@ print("Byte Pair stats:")
 print(sorted(((v, k) for k, v in stats.items()), reverse=True))
 
 # Replace all consecutive occurrences of pair with the new token idx
-print(merge([5, 6, 6, 7, 9, 1], [6, 7], 99))
+print("Merging pairs:")
+print("pair:", (6, 7), "idx:", 99)
+print("Before merge:", [5, 6, 6, 7, 9, 1])
+print("After merge:", merge([5, 6, 6, 7, 9, 1], [6, 7], 99))
+
+# Replace the most frequent pair with a new token, 256
+# (256 is the first unused token id)
 top_pair = max(stats, key=stats.get)
 tokens2 = merge(tokens, top_pair, 256)
 print(tokens2)
