@@ -79,7 +79,7 @@ def decode(ids):
 
 print(decode([128]))
 
-
+print('merges.get:', merges.values())
 def encode(text):
     """Encode a string into a list of token ids."""
     tokens = list(text.encode("utf-8"))

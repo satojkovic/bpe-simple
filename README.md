@@ -1,6 +1,6 @@
 # bpe-simple
 
-A simple implementation of Byte Pair Encoding (BPE) tokenization algorithm.
+A simple implementation of Byte Pair Encoding (BPE) tokenization algorithm in Python.
 
 ## Usage
 
