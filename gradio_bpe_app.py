@@ -9,6 +9,7 @@ using trained BPE models on user-provided text.
 import gradio as gr
 import json
 import random
+import tiktoken
 
 def get_pair_stats(tokens):
     """Calculate frequency of adjacent token pairs"""
@@ -185,15 +186,81 @@ def create_token_visualization(text, tokens, vocab):
     
     return ''.join(html_parts)
 
+def create_tiktoken_visualization(text, tokens, token_strings, model_name):
+    """Create HTML visualization of tiktoken tokenized text"""
+    if not tokens:
+        return "<p>No tokens to display</p>"
+    
+    # Generate colors for each token
+    colors = generate_colors(len(tokens))
+    
+    html_parts = []
+    html_parts.append(f'<div style="font-family: monospace; font-size: 16px; line-height: 1.8; margin: 10px 0;">')
+    html_parts.append(f'<h4 style="margin-bottom: 10px; color: #333;">{model_name} Tokenization</h4>')
+    
+    for i, (token_id, token_str) in enumerate(zip(tokens, token_strings)):
+        # Escape HTML special characters
+        token_str_escaped = token_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        
+        # Create colored span with tooltip
+        color = colors[i % len(colors)]
+        html_parts.append(
+            f'<span style="background-color: {color}; padding: 3px 5px; margin: 1px; '
+            f'border-radius: 4px; border: 2px solid rgba(0,0,0,0.3); '
+            f'font-weight: 500; display: inline-block;" '
+            f'title="Token {i+1}: ID={token_id}, Text=\'{token_str}\'">'
+            f'{token_str_escaped}'
+            f'</span>'
+        )
+    
+    html_parts.append('</div>')
+    
+    # Add legend
+    html_parts.append('<div style="margin-top: 15px; font-size: 12px; color: #666;">')
+    html_parts.append(f'<strong>Legend:</strong> Each colored block represents one {model_name} token. Hover over tokens to see details.')
+    html_parts.append('</div>')
+    
+    return ''.join(html_parts)
+
 # Global variables for trained model
 TRAINING_TEXT = "こんにちは世界！Hello world! 機械学習は面白いですね。Machine learning is fascinating! Programming プログラミング 人工知能 AI technology テクノロジー"
 MERGES, _ = train_bpe(TRAINING_TEXT, vocab_size=350)
 VOCAB = create_vocabulary(MERGES)
 
+def get_tiktoken_comparison(text):
+    """Get tiktoken tokenization results for comparison"""
+    try:
+        # GPT-4 tokenizer
+        gpt4_enc = tiktoken.encoding_for_model("gpt-4")
+        gpt4_tokens = gpt4_enc.encode(text)
+        gpt4_decoded = gpt4_enc.decode(gpt4_tokens)
+        
+        # GPT-3.5 tokenizer  
+        gpt35_enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        gpt35_tokens = gpt35_enc.encode(text)
+        gpt35_decoded = gpt35_enc.decode(gpt35_tokens)
+        
+        return {
+            'gpt4': {
+                'tokens': gpt4_tokens,
+                'count': len(gpt4_tokens),
+                'decoded': gpt4_decoded,
+                'token_strings': [gpt4_enc.decode([t]) for t in gpt4_tokens]
+            },
+            'gpt35': {
+                'tokens': gpt35_tokens,
+                'count': len(gpt35_tokens),
+                'decoded': gpt35_decoded,
+                'token_strings': [gpt35_enc.decode([t]) for t in gpt35_tokens]
+            }
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
 def tokenize_text(input_text):
     """Main function for tokenizing user input"""
     if not input_text.strip():
-        return "Please enter some text to tokenize.", "", "", "", ""
+        return "Please enter some text to tokenize.", "", "", "", "", "", ""
     
     try:
         # Encode using trained BPE
@@ -205,8 +272,30 @@ def tokenize_text(input_text):
         # Decode to verify
         decoded_text = decode_tokens(encoded_tokens, VOCAB)
         
-        # Create visualization
-        visualization_html = create_token_visualization(input_text, encoded_tokens, VOCAB)
+        # Get tiktoken comparison
+        tiktoken_results = get_tiktoken_comparison(input_text)
+        
+        # Create BPE visualization
+        bpe_visualization_html = create_token_visualization(input_text, encoded_tokens, VOCAB)
+        
+        # Create tiktoken visualizations
+        tiktoken_visualization_html = ""
+        if 'error' not in tiktoken_results:
+            gpt4_viz = create_tiktoken_visualization(
+                input_text, 
+                tiktoken_results['gpt4']['tokens'], 
+                tiktoken_results['gpt4']['token_strings'], 
+                "GPT-4"
+            )
+            gpt35_viz = create_tiktoken_visualization(
+                input_text, 
+                tiktoken_results['gpt35']['tokens'], 
+                tiktoken_results['gpt35']['token_strings'], 
+                "GPT-3.5"
+            )
+            tiktoken_visualization_html = gpt4_viz + "<br><br>" + gpt35_viz
+        else:
+            tiktoken_visualization_html = f"<p>Error creating tiktoken visualization: {tiktoken_results['error']}</p>"
         
         # Format results
         token_info = f"**Original text:** {input_text}\n\n"
@@ -215,6 +304,12 @@ def tokenize_text(input_text):
         token_info += f"**Compression ratio:** {len(byte_tokens) / len(encoded_tokens):.2f}x\n\n"
         token_info += f"**Decoded verification:** {decoded_text}\n"
         token_info += f"**Accuracy:** {'✓ Perfect match' if input_text == decoded_text else '✗ Mismatch detected'}"
+        
+        # Add tiktoken comparison to summary
+        if 'error' not in tiktoken_results:
+            token_info += f"\n\n**Tiktoken Comparison:**\n"
+            token_info += f"GPT-4: {tiktoken_results['gpt4']['count']} tokens\n"
+            token_info += f"GPT-3.5: {tiktoken_results['gpt35']['count']} tokens"
         
         # Token details
         token_details = "**BPE Token IDs:**\n" + str(encoded_tokens) + "\n\n"
@@ -235,10 +330,29 @@ def tokenize_text(input_text):
             char = chr(byte_val) if 32 <= byte_val <= 126 else f"\\x{byte_val:02x}"
             utf8_details += f"Byte {i+1}: {byte_val} → '{char}'\n"
         
-        return token_info, token_details, utf8_details, visualization_html, ""
+        # Tiktoken details
+        tiktoken_details = ""
+        if 'error' not in tiktoken_results:
+            tiktoken_details = "**GPT-4 Tokenization:**\n"
+            tiktoken_details += f"Token IDs: {tiktoken_results['gpt4']['tokens']}\n"
+            tiktoken_details += f"Token count: {tiktoken_results['gpt4']['count']}\n"
+            tiktoken_details += "Token strings:\n"
+            for i, token_str in enumerate(tiktoken_results['gpt4']['token_strings']):
+                tiktoken_details += f"  {i+1}: '{token_str}'\n"
+            
+            tiktoken_details += "\n**GPT-3.5 Tokenization:**\n"
+            tiktoken_details += f"Token IDs: {tiktoken_results['gpt35']['tokens']}\n"
+            tiktoken_details += f"Token count: {tiktoken_results['gpt35']['count']}\n"
+            tiktoken_details += "Token strings:\n"
+            for i, token_str in enumerate(tiktoken_results['gpt35']['token_strings']):
+                tiktoken_details += f"  {i+1}: '{token_str}'\n"
+        else:
+            tiktoken_details = f"Error getting tiktoken results: {tiktoken_results['error']}"
+        
+        return token_info, token_details, utf8_details, bpe_visualization_html, tiktoken_visualization_html, tiktoken_details, ""
         
     except Exception as e:
-        return f"Error processing text: {str(e)}", "", "", "", ""
+        return f"Error processing text: {str(e)}", "", "", "", "", "", ""
 
 def create_interface():
     """Create Gradio interface"""
@@ -270,13 +384,17 @@ def create_interface():
         
         with gr.Row():
             with gr.Column():
-                visualization_output = gr.HTML(label="Token Visualization")
+                visualization_output = gr.HTML(label="BPE Token Visualization")
+            with gr.Column():
+                tiktoken_visualization_output = gr.HTML(label="Tiktoken Visualization")
             
         with gr.Row():
             with gr.Column():
                 token_output = gr.Markdown(label="BPE Token Details")
             with gr.Column():
                 utf8_output = gr.Markdown(label="UTF-8 Byte Details")
+            with gr.Column():
+                tiktoken_output = gr.Markdown(label="Tiktoken Comparison")
         
         with gr.Row():
             error_output = gr.Textbox(label="Errors", visible=False)
@@ -299,13 +417,13 @@ def create_interface():
         tokenize_btn.click(
             fn=tokenize_text,
             inputs=[input_text],
-            outputs=[summary_output, token_output, utf8_output, visualization_output, error_output]
+            outputs=[summary_output, token_output, utf8_output, visualization_output, tiktoken_visualization_output, tiktoken_output, error_output]
         )
         
         input_text.submit(
             fn=tokenize_text,
             inputs=[input_text],
-            outputs=[summary_output, token_output, utf8_output, visualization_output, error_output]
+            outputs=[summary_output, token_output, utf8_output, visualization_output, tiktoken_visualization_output, tiktoken_output, error_output]
         )
         
         gr.Markdown("""
@@ -329,4 +447,4 @@ if __name__ == "__main__":
     # Create and launch the interface
     demo = create_interface()
     print("Starting Gradio app...")
-    demo.launch(share=False, debug=False, server_port=7860)
+    demo.launch(share=False, debug=False, server_port=7861)
