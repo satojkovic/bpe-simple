@@ -198,9 +198,17 @@ def create_tiktoken_visualization(text, tokens, token_strings, model_name):
     html_parts.append(f'<div style="font-family: monospace; font-size: 16px; line-height: 1.8; margin: 10px 0;">')
     html_parts.append(f'<h4 style="margin-bottom: 10px; color: #333;">{model_name} Tokenization</h4>')
     
+    # Try to reconstruct the original text by showing byte sequences for invalid tokens
     for i, (token_id, token_str) in enumerate(zip(tokens, token_strings)):
-        # Escape HTML special characters
-        token_str_escaped = token_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        # Check if token string contains replacement characters
+        if '�' in token_str and len(token_str) == 1:
+            # This is likely a byte token, show it differently
+            display_str = f'[{token_id}]'
+            tooltip_text = f"Token {i+1}: ID={token_id}, Byte token (part of multi-byte character)"
+        else:
+            # Regular token
+            display_str = token_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            tooltip_text = f"Token {i+1}: ID={token_id}, Text='{token_str}'"
         
         # Create colored span with tooltip
         color = colors[i % len(colors)]
@@ -208,16 +216,18 @@ def create_tiktoken_visualization(text, tokens, token_strings, model_name):
             f'<span style="background-color: {color}; padding: 3px 5px; margin: 1px; '
             f'border-radius: 4px; border: 2px solid rgba(0,0,0,0.3); '
             f'font-weight: 500; display: inline-block;" '
-            f'title="Token {i+1}: ID={token_id}, Text=\'{token_str}\'">'
-            f'{token_str_escaped}'
+            f'title="{tooltip_text}">'
+            f'{display_str}'
             f'</span>'
         )
     
     html_parts.append('</div>')
     
-    # Add legend
+    # Add legend with explanation
     html_parts.append('<div style="margin-top: 15px; font-size: 12px; color: #666;">')
-    html_parts.append(f'<strong>Legend:</strong> Each colored block represents one {model_name} token. Hover over tokens to see details.')
+    html_parts.append(f'<strong>Legend:</strong> Each colored block represents one {model_name} token. ')
+    html_parts.append('[ID] tokens are byte-level tokens that combine to form multi-byte characters like Japanese kanji. ')
+    html_parts.append('Hover over tokens to see details.')
     html_parts.append('</div>')
     
     return ''.join(html_parts)
@@ -227,6 +237,24 @@ TRAINING_TEXT = "こんにちは世界！Hello world! 機械学習は面白い�
 MERGES, _ = train_bpe(TRAINING_TEXT, vocab_size=350)
 VOCAB = create_vocabulary(MERGES)
 
+def get_token_boundaries(text, tokens, encoding):
+    """Get the text boundaries for each token using encode/decode matching"""
+    token_strings = []
+    text_bytes = text.encode('utf-8')
+    
+    # Decode each token individually, handling invalid sequences
+    for token in tokens:
+        try:
+            # Try to decode the token directly first
+            token_bytes = encoding.decode_single_token_bytes(token)
+            token_str = token_bytes.decode('utf-8', errors='replace')
+            token_strings.append(token_str)
+        except:
+            # Fallback to showing the token ID if decoding fails
+            token_strings.append(f"[{token}]")
+    
+    return token_strings
+
 def get_tiktoken_comparison(text):
     """Get tiktoken tokenization results for comparison"""
     try:
@@ -234,24 +262,26 @@ def get_tiktoken_comparison(text):
         gpt4_enc = tiktoken.encoding_for_model("gpt-4")
         gpt4_tokens = gpt4_enc.encode(text)
         gpt4_decoded = gpt4_enc.decode(gpt4_tokens)
+        gpt4_token_strings = get_token_boundaries(text, gpt4_tokens, gpt4_enc)
         
         # GPT-3.5 tokenizer  
         gpt35_enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
         gpt35_tokens = gpt35_enc.encode(text)
         gpt35_decoded = gpt35_enc.decode(gpt35_tokens)
+        gpt35_token_strings = get_token_boundaries(text, gpt35_tokens, gpt35_enc)
         
         return {
             'gpt4': {
                 'tokens': gpt4_tokens,
                 'count': len(gpt4_tokens),
                 'decoded': gpt4_decoded,
-                'token_strings': [gpt4_enc.decode([t]) for t in gpt4_tokens]
+                'token_strings': gpt4_token_strings
             },
             'gpt35': {
                 'tokens': gpt35_tokens,
                 'count': len(gpt35_tokens),
                 'decoded': gpt35_decoded,
-                'token_strings': [gpt35_enc.decode([t]) for t in gpt35_tokens]
+                'token_strings': gpt35_token_strings
             }
         }
     except Exception as e:
@@ -447,4 +477,4 @@ if __name__ == "__main__":
     # Create and launch the interface
     demo = create_interface()
     print("Starting Gradio app...")
-    demo.launch(share=False, debug=False, server_port=7861)
+    demo.launch(share=False, debug=False, server_port=7860)
