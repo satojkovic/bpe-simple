@@ -417,14 +417,16 @@ def create_interface():
                 visualization_output = gr.HTML(label="BPE Token Visualization")
             with gr.Column():
                 tiktoken_visualization_output = gr.HTML(label="Tiktoken Visualization")
+        
+        # Collapsible sections for detailed information
+        with gr.Accordion("🔍 BPE Token Details", open=False):
+            token_output = gr.Markdown(label="BPE Token Details")
             
-        with gr.Row():
-            with gr.Column():
-                token_output = gr.Markdown(label="BPE Token Details")
-            with gr.Column():
-                utf8_output = gr.Markdown(label="UTF-8 Byte Details")
-            with gr.Column():
-                tiktoken_output = gr.Markdown(label="Tiktoken Comparison")
+        with gr.Accordion("📝 UTF-8 Byte Details", open=False):
+            utf8_output = gr.Markdown(label="UTF-8 Byte Details")
+            
+        with gr.Accordion("🤖 Tiktoken Comparison", open=False):
+            tiktoken_output = gr.Markdown(label="Tiktoken Comparison")
         
         with gr.Row():
             error_output = gr.Textbox(label="Errors", visible=False)
