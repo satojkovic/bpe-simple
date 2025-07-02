@@ -406,6 +406,20 @@ def create_interface():
                     value="こんにちは Hello 機械学習"
                 )
                 
+                # Examples
+                gr.Examples(
+                    examples=[
+                        ["Hello world!"],
+                        ["こんにちは"],
+                        ["機械学習は面白い"],
+                        ["Programming プログラミング"],
+                        ["人工知能 AI technology"],
+                        ["🤖 Unicode symbols ✨"],
+                        ["Mix 混合 text テキスト!"]
+                    ],
+                    inputs=input_text
+                )
+                
                 tokenize_btn = gr.Button("🚀 Tokenize Text", variant="primary")
         
         with gr.Row():
@@ -431,19 +445,6 @@ def create_interface():
         with gr.Row():
             error_output = gr.Textbox(label="Errors", visible=False)
         
-        # Examples
-        gr.Examples(
-            examples=[
-                ["Hello world!"],
-                ["こんにちは"],
-                ["機械学習は面白い"],
-                ["Programming プログラミング"],
-                ["人工知能 AI technology"],
-                ["🤖 Unicode symbols ✨"],
-                ["Mix 混合 text テキスト!"]
-            ],
-            inputs=input_text
-        )
         
         # Event handlers
         tokenize_btn.click(
