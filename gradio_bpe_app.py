@@ -287,6 +287,23 @@ def get_tiktoken_comparison(text):
     except Exception as e:
         return {'error': str(e)}
 
+def update_token_counts(input_text):
+    """Update real-time token counts"""
+    if not input_text:
+        return "0", "0", "0"
+    
+    char_count = len(input_text)
+    utf8_byte_count = len(input_text.encode('utf-8'))
+    
+    # Quick estimation of BPE tokens (rough approximation)
+    try:
+        bpe_tokens = encode_text(input_text, MERGES)
+        bpe_count = len(bpe_tokens)
+    except:
+        bpe_count = utf8_byte_count // 2  # Rough fallback estimate
+    
+    return str(char_count), str(utf8_byte_count), str(bpe_count)
+
 def tokenize_text(input_text):
     """Main function for tokenizing user input"""
     if not input_text.strip():
@@ -406,6 +423,30 @@ def create_interface():
                     value="こんにちは Hello 機械学習"
                 )
                 
+                # Real-time token count display
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        char_count = gr.Textbox(
+                            label="Characters",
+                            value="17",
+                            interactive=False,
+                            max_lines=1
+                        )
+                    with gr.Column(scale=1):
+                        utf8_count = gr.Textbox(
+                            label="UTF-8 Bytes",
+                            value="29",
+                            interactive=False,
+                            max_lines=1
+                        )
+                    with gr.Column(scale=1):
+                        bpe_count = gr.Textbox(
+                            label="Estimated BPE Tokens",
+                            value="12",
+                            interactive=False,
+                            max_lines=1
+                        )
+                
                 # Examples
                 gr.Examples(
                     examples=[
@@ -457,6 +498,13 @@ def create_interface():
             fn=tokenize_text,
             inputs=[input_text],
             outputs=[summary_output, token_output, utf8_output, visualization_output, tiktoken_visualization_output, tiktoken_output, error_output]
+        )
+        
+        # Real-time token count updates
+        input_text.change(
+            fn=update_token_counts,
+            inputs=[input_text],
+            outputs=[char_count, utf8_count, bpe_count]
         )
         
         gr.Markdown("""
